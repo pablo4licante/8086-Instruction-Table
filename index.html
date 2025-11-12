@@ -8,4 +8,30 @@
 <p>Work in progress 🚧</p>
 
 </body>
+
+<script>
+// Expected fetched data to be
+// INSTRUCTION NAME
+//              --> OPERANDS
+//              --> FLAGS (C, Z, S, O, P, A)
+//                        (Options: 1, 0, r [result], u [undefined])
+//              --> DESCRIPTION (HTML for the Detail)
+
+fetch('./8086.json')
+  .then(response => response.json())
+  .then(instructions => {
+    Object.entries(instructions).forEach(([key, value]) => {
+      console.log(`Instruction: ${key}`);
+      console.log(`  Operands: ${value.operands}`);
+      console.log(`  Flags: ${value.flags}`);
+      console.log(`  Description: ${value.description}`);
+    });
+  })
+  .catch(error => console.error('Error reading JSON:', error));
+
+
+</script>
+
 </html>
+
+
