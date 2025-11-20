@@ -1,37 +1,589 @@
-
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8086 Reference</title>
+    <style>
+        :root {
+            --bg-app: #0f111a;
+            --bg-sidebar: #14161f;
+            --bg-shelf: #1a1d29;
+            --bg-code: #0d0f16;
+            --border: #2a2e3f;
+
+            --text-main: #a6accd;
+            --text-bright: #e4e6f0;
+            --text-muted: #6b7089;
+
+            /* Syntax Highlighting */
+            --syn-key: #c678dd;      /* Purple */
+            --syn-reg: #e5c07b;      /* Gold */
+            --syn-num: #d19a66;      /* Orange */
+            --syn-str: #98c379;      /* Green */
+            --syn-com: #5c6370;      /* Grey */
+
+            /* Flag Status Colors */
+            --f-set: #98c379;        /* Green (1) */
+            --f-clr: #e06c75;        /* Red (0) */
+            --f-mod: #e5c07b;        /* Yellow (Modified) */
+            --f-dim: #3e4452;        /* Grey (Unchanged) */
+
+            --accent: #89ca78;
+            --accent-glow: rgba(137, 202, 120, 0.15);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            font-size: 14px;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 50;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-bright);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .brand span {
+            background: var(--accent);
+            color: var(--bg-app);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: var(--bg-app);
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            border-radius: 6px;
+            color: var(--text-bright);
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+        .search-input:focus { border-color: var(--accent); outline: none; }
+
+        .nav-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        /* Navigation */
+        details { margin-bottom: 0; }
+        summary {
+            padding: 12px 20px;
+            cursor: pointer;
+            color: var(--text-bright);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        summary:hover { background: var(--bg-shelf); }
+        summary::-webkit-details-marker { display: none; }
+        summary::after { content: '+'; color: var(--text-muted); font-weight: normal; }
+        details[open] summary::after { content: '−'; }
+        details[open] summary { color: var(--accent); }
+
+        .nav-item {
+            display: block;
+            padding: 8px 20px 8px 35px;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-left: 2px solid transparent;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .nav-item:hover { color: var(--text-bright); background: rgba(255,255,255,0.03); }
+        .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-glow); }
+
+        /* Community About Section */
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: var(--bg-sidebar);
+            line-height: 1.5;
+        }
+        .sidebar-footer h4 { color: var(--text-bright); margin: 0 0 5px 0; font-size: 0.9rem; }
+
+        /* --- MAIN CONTENT --- */
+        .main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 40px;
+            scroll-behavior: smooth;
+        }
+
+        .content-wrapper {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 0 100px 0;
+        }
+
+        /* FLAG LEGEND (Info First) */
+        .legend-card {
+            background: var(--bg-shelf);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .legend-title { grid-column: 1 / -1; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 5px; }
+
+        .legend-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+        .legend-item { font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+        .legend-item span { color: var(--text-bright); font-weight: 700; font-size: 0.9rem; min-width: 25px; }
+
+        .color-key { display: flex; gap: 15px; flex-wrap: wrap; }
+        .key-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-muted); }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* Instruction Container */
+        .instruction-container {
+            margin-bottom: 60px;
+            scroll-margin-top: 20px;
+        }
+
+        .inst-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 10px;
+        }
+        .inst-title { font-size: 2.5rem; font-weight: 700; color: var(--text-bright); line-height: 1; }
+        .inst-cat { color: var(--accent); font-size: 0.9rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Shelf Layout */
+        .shelf-stack { display: flex; flex-direction: column; gap: 15px; }
+        .shelf {
+            background: var(--bg-shelf);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .shelf-row { display: flex; gap: 15px; }
+        .shelf-row > .shelf { flex: 1; }
+
+        .shelf-label {
+            background: rgba(0,0,0,0.2);
+            padding: 8px 16px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+            font-weight: 700;
+        }
+        .shelf-content { padding: 15px; font-size: 0.95rem; line-height: 1.6; }
+        .shelf-content.code-bg { background: var(--bg-code); color: var(--text-bright); }
+
+        /* COLOR CODED FLAGS (Pill Style) */
+        .flag-strip {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .flag-box {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 6px 10px;
+            background: var(--bg-app);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            cursor: help;
+            transition: transform 0.1s;
+        }
+
+        .flag-box:hover { transform: translateY(-2px); }
+
+        /* Color Coding */
+        .flag-box.set {
+            border-color: var(--f-set);
+            color: var(--f-set);
+            background: rgba(152, 195, 121, 0.1);
+            box-shadow: 0 0 10px rgba(152, 195, 121, 0.1);
+        }
+        .flag-box.clr {
+            border-color: var(--f-clr);
+            color: var(--f-clr);
+            background: rgba(224, 108, 117, 0.1);
+        }
+        .flag-box.mod {
+            border-color: var(--f-mod);
+            color: var(--f-mod);
+            background: rgba(229, 192, 123, 0.1);
+        }
+        .flag-box.undef {
+            border-color: var(--border);
+            color: var(--text-muted);
+            opacity: 0.7;
+            border-style: dashed;
+        }
+        .flag-box.dim {
+            opacity: 0.2;
+            border-color: transparent;
+        }
+
+        /* Syntax Highlighting */
+        .tok-mne { color: var(--syn-key); font-weight: bold; }
+        .tok-reg { color: var(--syn-reg); }
+        .tok-num { color: var(--syn-num); }
+        .tok-str { color: var(--syn-str); }
+        .tok-com { color: var(--syn-com); font-style: italic; }
+
+        /* Mobile Header */
+        .mobile-header {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: 60px;
+            background: var(--bg-sidebar);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+            padding: 0 20px;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .menu-btn { background:none; border:1px solid var(--border); color:var(--text-bright); padding:5px 10px; border-radius:4px; font-size:1.2rem; }
+
+        @media (max-width: 768px) {
+            .mobile-header { display: flex; }
+            .sidebar { position: fixed; top: 60px; bottom: 0; left: 0; transform: translateX(-100%); width: 100%; }
+            .sidebar.open { transform: translateX(0); }
+            .main { padding: 20px; margin-top: 60px; }
+            .shelf-row { flex-direction: column; }
+            .legend-card { grid-template-columns: 1fr; }
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    </style>
+</head>
 <body>
 
-<h1>8086</h1>
-<p>Work in progress 🚧</p>
+<div class="mobile-header">
+    <div class="brand" style="margin:0"><span>x86</span> REF</div>
+    <button class="menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+</div>
 
-</body>
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <div class="brand"><span>x86</span> REFERENCE</div>
+        <input type="text" id="searchInput" class="search-input" placeholder="Filter instructions..." autocomplete="off">
+    </div>
+
+    <nav class="nav-scroll" id="navContent">
+        </nav>
+
+    <div class="sidebar-footer">
+        <h4>About</h4>
+        <p>A modern, developer-friendly 8086 instruction set reference. Built for the community.</p>
+    </div>
+</aside>
+
+<main class="main">
+    <div class="content-wrapper">
+
+        <div class="legend-card">
+            <div class="legend-title">Flag Key</div>
+            <div class="legend-list">
+                <div class="legend-item"><span>OF</span> Overflow Flag</div>
+                <div class="legend-item"><span>DF</span> Direction Flag</div>
+                <div class="legend-item"><span>IF</span> Interrupt Flag</div>
+                <div class="legend-item"><span>TF</span> Trap Flag</div>
+                <div class="legend-item"><span>SF</span> Sign Flag</div>
+                <div class="legend-item"><span>ZF</span> Zero Flag</div>
+                <div class="legend-item"><span>AF</span> Auxiliary Carry</div>
+                <div class="legend-item"><span>PF</span> Parity Flag</div>
+                <div class="legend-item"><span>CF</span> Carry Flag</div>
+            </div>
+
+            <div class="legend-title" style="margin-top: 20px;">Status Colors</div>
+            <div class="color-key">
+                <div class="key-item"><div class="dot" style="background:var(--f-mod)"></div> Modified</div>
+                <div class="key-item"><div class="dot" style="background:var(--f-set)"></div> Set (1)</div>
+                <div class="key-item"><div class="dot" style="background:var(--f-clr)"></div> Cleared (0)</div>
+                <div class="key-item"><div class="dot" style="border:1px dashed var(--text-muted)"></div> Undefined</div>
+                <div class="key-item"><div class="dot" style="background:var(--f-dim)"></div> Unchanged</div>
+            </div>
+        </div>
+
+        <div id="mainContent">
+            <div style="text-align:center; margin-top:100px; color:var(--text-muted)">Loading Database...</div>
+        </div>
+    </div>
+</main>
 
 <script>
-// Expected fetched data to be
-// INSTRUCTION NAME
-//              --> OPERANDS
-//              --> FLAGS (C, Z, S, O, P, A)
-//                        (Options: 1, 0, r [result], u [undefined])
-//              --> DESCRIPTION (HTML for the Detail)
+const db = [
+    // DATA TRANSFER
+    {c:"Data Transfer", n:"MOV", d:"Copies the source operand to the destination. No flags are affected.", o:"REG, memory | memory, REG\nREG, REG | REG, imm\nmem, imm | SREG, mem\nmem, SREG | REG, SREG\nSREG, REG", a:"dest = src", f:{}, e:"MOV AX, 10h\nMOV [BX], AX"},
+    {c:"Data Transfer", n:"PUSH", d:"Decrements SP by 2 and pushes operand onto stack.", o:"REG | SREG\nmemory | imm (186+)", a:"SP -= 2\nSS:[SP] = src", f:{}, e:"PUSH AX\nPUSH ES"},
+    {c:"Data Transfer", n:"POP", d:"Pops operand from stack top and increments SP by 2.", o:"REG | SREG\nmemory", a:"dest = SS:[SP]\nSP += 2", f:{}, e:"POP BX"},
+    {c:"Data Transfer", n:"PUSHA", d:"Push All General Registers.", o:"No operands", a:"Push AX,CX,DX,BX,SP,BP,SI,DI", f:{}, e:"PUSHA"},
+    {c:"Data Transfer", n:"POPA", d:"Pop All General Registers.", o:"No operands", a:"Pop DI,SI,BP,SP,BX,DX,CX,AX", f:{}, e:"POPA"},
+    {c:"Data Transfer", n:"XCHG", d:"Exchanges the values of two operands.", o:"REG, mem | mem, REG\nREG, REG", a:"Swap dest, src", f:{}, e:"XCHG AX, BX"},
+    {c:"Data Transfer", n:"XLATB", d:"Translate Byte (Table Lookup).", o:"No operands", a:"AL = DS:[BX + AL]", f:{}, e:"MOV BX, table\nXLATB"},
+    {c:"Data Transfer", n:"IN", d:"Input from I/O port.", o:"AL, imm8 | AX, imm8\nAL, DX | AX, DX", a:"AL/AX = Port[src]", f:{}, e:"IN AL, 60h"},
+    {c:"Data Transfer", n:"OUT", d:"Output to I/O port.", o:"imm8, AL | imm8, AX\nDX, AL | DX, AX", a:"Port[dest] = AL/AX", f:{}, e:"OUT 61h, AL"},
+    {c:"Data Transfer", n:"LEA", d:"Load Effective Address.", o:"REG, memory", a:"REG = Offset(mem)", f:{}, e:"LEA BX, [SI+5]"},
+    {c:"Data Transfer", n:"LDS", d:"Load Far Pointer to REG and DS.", o:"REG, memory", a:"REG=[mem], DS=[mem+2]", f:{}, e:"LDS SI, [BX]"},
+    {c:"Data Transfer", n:"LES", d:"Load Far Pointer to REG and ES.", o:"REG, memory", a:"REG=[mem], ES=[mem+2]", f:{}, e:"LES DI, [BX]"},
+    {c:"Data Transfer", n:"LAHF", d:"Load AH from Flags.", o:"No operands", a:"AH = FlagsLow", f:{}, e:"LAHF"},
+    {c:"Data Transfer", n:"SAHF", d:"Store AH to Flags.", o:"No operands", a:"FlagsLow = AH", f:{S:'r',Z:'r',A:'r',P:'r',C:'r'}, e:"SAHF"},
+    {c:"Data Transfer", n:"PUSHF", d:"Push Flags to stack.", o:"No operands", a:"Stack < Flags", f:{}, e:"PUSHF"},
+    {c:"Data Transfer", n:"POPF", d:"Pop stack to Flags.", o:"No operands", a:"Flags < Stack", f:{O:'r',D:'r',I:'r',T:'r',S:'r',Z:'r',A:'r',P:'r',C:'r'}, e:"POPF"},
 
-fetch('./8086.json')
-  .then(response => response.json())
-  .then(instructions => {
-    Object.entries(instructions).forEach(([key, value]) => {
-      console.log(`Instruction: ${key}`);
-      console.log(`  Operands: ${value.operands}`);
-      console.log(`  Flags: ${value.flags}`);
-      console.log(`  Description: ${value.description}`);
+    // ARITHMETIC
+    {c:"Arithmetic", n:"ADD", d:"Add source to destination.", o:"REG, mem | mem, REG\nREG, REG | REG, imm\nmem, imm", a:"dest += src", f:{O:'r',S:'r',Z:'r',A:'r',P:'r',C:'r'}, e:"ADD AX, 5"},
+    {c:"Arithmetic", n:"ADC", d:"Add with Carry.", o:"Same as ADD", a:"dest += src + CF", f:{O:'r',S:'r',Z:'r',A:'r',P:'r',C:'r'}, e:"ADC AL, 1"},
+    {c:"Arithmetic", n:"SUB", d:"Subtract source from destination.", o:"Same as ADD", a:"dest -= src", f:{O:'r',S:'r',Z:'r',A:'r',P:'r',C:'r'}, e:"SUB AX, 10"},
+    {c:"Arithmetic", n:"SBB", d:"Subtract with Borrow.", o:"Same as ADD", a:"dest -= src + CF", f:{O:'r',S:'r',Z:'r',A:'r',P:'r',C:'r'}, e:"SBB AH, 0"},
+    {c:"Arithmetic", n:"INC", d:"Increment by 1. CF unchanged.", o:"REG | memory", a:"dest++", f:{O:'r',S:'r',Z:'r',A:'r',P:'r'}, e:"INC CX"},
+    {c:"Arithmetic", n:"DEC", d:"Decrement by 1. CF unchanged.", o:"REG | memory", a:"dest--", f:{O:'r',S:'r',Z:'r',A:'r',P:'r'}, e:"DEC SI"},
+    {c:"Arithmetic", n:"NEG", d:"Two's Complement Negation.", o:"REG | memory", a:"dest = 0 - dest", f:{O:'r',S:'r',Z:'r',A:'r',P:'r',C:'r'}, e:"NEG AX"},
+    {c:"Arithmetic", n:"CMP", d:"Compare (Subtract and discard result).", o:"Same as ADD", a:"dest - src", f:{O:'r',S:'r',Z:'r',A:'r',P:'r',C:'r'}, e:"CMP AL, 10"},
+    {c:"Arithmetic", n:"MUL", d:"Unsigned Multiply.", o:"REG | memory", a:"AX = AL*src8\nDX:AX = AX*src16", f:{O:'r',C:'r',S:'?',Z:'?',A:'?',P:'?'}, e:"MUL BL"},
+    {c:"Arithmetic", n:"IMUL", d:"Signed Multiply.", o:"REG | memory", a:"Signed Mult", f:{O:'r',C:'r',S:'?',Z:'?',A:'?',P:'?'}, e:"IMUL BL"},
+    {c:"Arithmetic", n:"DIV", d:"Unsigned Divide.", o:"REG | memory", a:"AX/src8 -> AL,AH\nDX:AX/src16 -> AX,DX", f:{O:'?',S:'?',Z:'?',A:'?',P:'?',C:'?'}, e:"DIV CX"},
+    {c:"Arithmetic", n:"IDIV", d:"Signed Divide.", o:"REG | memory", a:"Signed Div", f:{O:'?',S:'?',Z:'?',A:'?',P:'?',C:'?'}, e:"IDIV CX"},
+    {c:"Arithmetic", n:"AAA", d:"ASCII Adjust after Addition.", o:"No operands", a:"Adjust AL for BCD", f:{A:'r',C:'r',O:'?',S:'?',Z:'?',P:'?'}, e:"ADD AL, 6\nAAA"},
+    {c:"Arithmetic", n:"AAD", d:"ASCII Adjust before Division.", o:"No operands", a:"AL = AH*10+AL", f:{S:'r',Z:'r',P:'r',O:'?',C:'?',A:'?'}, e:"AAD"},
+    {c:"Arithmetic", n:"AAM", d:"ASCII Adjust after Multiply.", o:"No operands", a:"AH=AL/10; AL=AL%10", f:{S:'r',Z:'r',P:'r',O:'?',C:'?',A:'?'}, e:"MUL BL\nAAM"},
+    {c:"Arithmetic", n:"AAS", d:"ASCII Adjust after Subtraction.", o:"No operands", a:"Adjust AL for BCD", f:{A:'r',C:'r',O:'?',S:'?',Z:'?',P:'?'}, e:"SUB AL, 5\nAAS"},
+    {c:"Arithmetic", n:"DAA", d:"Decimal Adjust after Addition.", o:"No operands", a:"Adjust for Packed BCD", f:{S:'r',Z:'r',A:'r',P:'r',C:'r',O:'?'}, e:"DAA"},
+    {c:"Arithmetic", n:"DAS", d:"Decimal Adjust after Subtraction.", o:"No operands", a:"Adjust for Packed BCD", f:{S:'r',Z:'r',A:'r',P:'r',C:'r',O:'?'}, e:"DAS"},
+    {c:"Arithmetic", n:"CBW", d:"Convert Byte to Word.", o:"No operands", a:"Sign extend AL->AX", f:{}, e:"CBW"},
+    {c:"Arithmetic", n:"CWD", d:"Convert Word to Double.", o:"No operands", a:"Sign extend AX->DX", f:{}, e:"CWD"},
+
+    // LOGIC
+    {c:"Logic", n:"AND", d:"Logical AND.", o:"REG, mem | mem, REG\nREG, imm", a:"dest &= src", f:{O:'0',C:'0',S:'r',Z:'r',P:'r',A:'?'}, e:"AND AL, 0Fh"},
+    {c:"Logic", n:"OR", d:"Logical OR.", o:"Same as AND", a:"dest |= src", f:{O:'0',C:'0',S:'r',Z:'r',P:'r',A:'?'}, e:"OR AX, 80h"},
+    {c:"Logic", n:"XOR", d:"Logical Exclusive OR.", o:"Same as AND", a:"dest ^= src", f:{O:'0',C:'0',S:'r',Z:'r',P:'r',A:'?'}, e:"XOR AX, AX"},
+    {c:"Logic", n:"NOT", d:"Logical NOT (Invert).", o:"REG | memory", a:"dest = ~dest", f:{}, e:"NOT DX"},
+    {c:"Logic", n:"TEST", d:"Logical Compare (AND).", o:"Same as AND", a:"dest & src", f:{O:'0',C:'0',S:'r',Z:'r',P:'r',A:'?'}, e:"TEST AL, 1"},
+    {c:"Logic", n:"SHL", d:"Shift Logical Left.", o:"REG, 1 | REG, CL", a:"dest << count", f:{O:'r',S:'r',Z:'r',P:'r',C:'r',A:'?'}, e:"SHL AX, 1"},
+    {c:"Logic", n:"SHR", d:"Shift Logical Right.", o:"REG, 1 | REG, CL", a:"dest >> count", f:{O:'r',S:'r',Z:'r',P:'r',C:'r',A:'?'}, e:"SHR AL, CL"},
+    {c:"Logic", n:"SAL", d:"Shift Arithmetic Left.", o:"REG, 1 | REG, CL", a:"Same as SHL", f:{O:'r',S:'r',Z:'r',P:'r',C:'r',A:'?'}, e:"SAL AX, 1"},
+    {c:"Logic", n:"SAR", d:"Shift Arithmetic Right.", o:"REG, 1 | REG, CL", a:"dest >>> count", f:{O:'r',S:'r',Z:'r',P:'r',C:'r',A:'?'}, e:"SAR AL, 1"},
+    {c:"Logic", n:"ROL", d:"Rotate Left.", o:"REG, 1 | REG, CL", a:"Rotate Left", f:{C:'r',O:'r'}, e:"ROL AX, 1"},
+    {c:"Logic", n:"ROR", d:"Rotate Right.", o:"REG, 1 | REG, CL", a:"Rotate Right", f:{C:'r',O:'r'}, e:"ROR AX, 1"},
+    {c:"Logic", n:"RCL", d:"Rotate through Carry Left.", o:"REG, 1 | REG, CL", a:"Rotate via CF", f:{C:'r',O:'r'}, e:"RCL AX, 1"},
+    {c:"Logic", n:"RCR", d:"Rotate through Carry Right.", o:"REG, 1 | REG, CL", a:"Rotate via CF", f:{C:'r',O:'r'}, e:"RCR AX, 1"},
+
+    // STRING
+    {c:"String", n:"MOVSB", d:"Move String Byte.", o:"None", a:"ES:[DI]=DS:[SI]", f:{}, e:"REP MOVSB"},
+    {c:"String", n:"MOVSW", d:"Move String Word.", o:"None", a:"ES:[DI]=DS:[SI]", f:{}, e:"REP MOVSW"},
+    {c:"String", n:"CMPSB", d:"Compare String Byte.", o:"None", a:"DS:[SI]-ES:[DI]", f:{O:'r',S:'r',Z:'r',A:'r',P:'r',C:'r'}, e:"REPE CMPSB"},
+    {c:"String", n:"CMPSW", d:"Compare String Word.", o:"None", a:"DS:[SI]-ES:[DI]", f:{O:'r',S:'r',Z:'r',A:'r',P:'r',C:'r'}, e:"REPE CMPSW"},
+    {c:"String", n:"SCASB", d:"Scan String Byte.", o:"None", a:"AL - ES:[DI]", f:{O:'r',S:'r',Z:'r',A:'r',P:'r',C:'r'}, e:"REPNE SCASB"},
+    {c:"String", n:"SCASW", d:"Scan String Word.", o:"None", a:"AX - ES:[DI]", f:{O:'r',S:'r',Z:'r',A:'r',P:'r',C:'r'}, e:"REPNE SCASW"},
+    {c:"String", n:"LODSB", d:"Load String Byte.", o:"None", a:"AL = DS:[SI]", f:{}, e:"LODSB"},
+    {c:"String", n:"LODSW", d:"Load String Word.", o:"None", a:"AX = DS:[SI]", f:{}, e:"LODSW"},
+    {c:"String", n:"STOSB", d:"Store String Byte.", o:"None", a:"ES:[DI] = AL", f:{}, e:"STOSB"},
+    {c:"String", n:"STOSW", d:"Store String Word.", o:"None", a:"ES:[DI] = AX", f:{}, e:"STOSW"},
+    {c:"String", n:"REP", d:"Repeat Prefix.", o:"Prefix", a:"Loop while CX>0", f:{}, e:"REP MOVSB"},
+    {c:"String", n:"REPE", d:"Repeat Equal.", o:"Prefix", a:"Loop while CX>0 & ZF=1", f:{}, e:"REPE CMPSB"},
+    {c:"String", n:"REPZ", d:"Repeat Zero.", o:"Prefix", a:"Same as REPE", f:{}, e:"REPZ CMPSB"},
+    {c:"String", n:"REPNE", d:"Repeat Not Equal.", o:"Prefix", a:"Loop while CX>0 & ZF=0", f:{}, e:"REPNE SCASB"},
+    {c:"String", n:"REPNZ", d:"Repeat Not Zero.", o:"Prefix", a:"Same as REPNE", f:{}, e:"REPNZ SCASB"},
+
+    // CONTROL FLOW
+    {c:"Control", n:"JMP", d:"Unconditional Jump.", o:"lbl | REG | mem", a:"IP = target", f:{}, e:"JMP start"},
+    {c:"Control", n:"CALL", d:"Call Procedure.", o:"proc | REG | mem", a:"Push IP, JMP", f:{}, e:"CALL func"},
+    {c:"Control", n:"RET", d:"Return from Procedure.", o:"None | imm16", a:"Pop IP", f:{}, e:"RET"},
+    {c:"Control", n:"RETF", d:"Return Far.", o:"None | imm16", a:"Pop IP, CS", f:{}, e:"RETF"},
+    {c:"Control", n:"JE", d:"Jump if Equal (ZF=1).", o:"label", a:"If ZF=1", f:{}, e:"JE target"},
+    {c:"Control", n:"JZ", d:"Jump if Zero (ZF=1).", o:"label", a:"If ZF=1", f:{}, e:"JZ target"},
+    {c:"Control", n:"JNE", d:"Jump if Not Equal (ZF=0).", o:"label", a:"If ZF=0", f:{}, e:"JNE target"},
+    {c:"Control", n:"JNZ", d:"Jump if Not Zero (ZF=0).", o:"label", a:"If ZF=0", f:{}, e:"JNZ target"},
+    {c:"Control", n:"JA", d:"Jump if Above (Unsigned >).", o:"label", a:"CF=0 & ZF=0", f:{}, e:"JA target"},
+    {c:"Control", n:"JNBE", d:"Jump Not Below/Equal.", o:"label", a:"CF=0 & ZF=0", f:{}, e:"JNBE target"},
+    {c:"Control", n:"JAE", d:"Jump if Above/Equal (Unsigned >=).", o:"label", a:"CF=0", f:{}, e:"JAE target"},
+    {c:"Control", n:"JNB", d:"Jump Not Below.", o:"label", a:"CF=0", f:{}, e:"JNB target"},
+    {c:"Control", n:"JB", d:"Jump if Below (Unsigned <).", o:"label", a:"CF=1", f:{}, e:"JB target"},
+    {c:"Control", n:"JNAE", d:"Jump Not Above/Equal.", o:"label", a:"CF=1", f:{}, e:"JNAE target"},
+    {c:"Control", n:"JBE", d:"Jump if Below/Equal (Unsigned <=).", o:"label", a:"CF=1 | ZF=1", f:{}, e:"JBE target"},
+    {c:"Control", n:"JNA", d:"Jump Not Above.", o:"label", a:"CF=1 | ZF=1", f:{}, e:"JNA target"},
+    {c:"Control", n:"JG", d:"Jump if Greater (Signed >).", o:"label", a:"ZF=0 & SF=OF", f:{}, e:"JG target"},
+    {c:"Control", n:"JNLE", d:"Jump Not Less/Equal.", o:"label", a:"ZF=0 & SF=OF", f:{}, e:"JNLE target"},
+    {c:"Control", n:"JGE", d:"Jump if Greater/Equal (Signed >=).", o:"label", a:"SF=OF", f:{}, e:"JGE target"},
+    {c:"Control", n:"JNL", d:"Jump Not Less.", o:"label", a:"SF=OF", f:{}, e:"JNL target"},
+    {c:"Control", n:"JL", d:"Jump if Less (Signed <).", o:"label", a:"SF!=OF", f:{}, e:"JL target"},
+    {c:"Control", n:"JNGE", d:"Jump Not Greater/Equal.", o:"label", a:"SF!=OF", f:{}, e:"JNGE target"},
+    {c:"Control", n:"JLE", d:"Jump if Less/Equal (Signed <=).", o:"label", a:"ZF=1 | SF!=OF", f:{}, e:"JLE target"},
+    {c:"Control", n:"JNG", d:"Jump Not Greater.", o:"label", a:"ZF=1 | SF!=OF", f:{}, e:"JNG target"},
+    {c:"Control", n:"JC", d:"Jump if Carry.", o:"label", a:"CF=1", f:{}, e:"JC target"},
+    {c:"Control", n:"JNC", d:"Jump if Not Carry.", o:"label", a:"CF=0", f:{}, e:"JNC target"},
+    {c:"Control", n:"JO", d:"Jump if Overflow.", o:"label", a:"OF=1", f:{}, e:"JO target"},
+    {c:"Control", n:"JNO", d:"Jump if Not Overflow.", o:"label", a:"OF=0", f:{}, e:"JNO target"},
+    {c:"Control", n:"JS", d:"Jump if Sign (Negative).", o:"label", a:"SF=1", f:{}, e:"JS target"},
+    {c:"Control", n:"JNS", d:"Jump if Not Sign (Positive).", o:"label", a:"SF=0", f:{}, e:"JNS target"},
+    {c:"Control", n:"JP", d:"Jump if Parity (Even).", o:"label", a:"PF=1", f:{}, e:"JP target"},
+    {c:"Control", n:"JPE", d:"Jump Parity Even.", o:"label", a:"PF=1", f:{}, e:"JPE target"},
+    {c:"Control", n:"JNP", d:"Jump if Not Parity (Odd).", o:"label", a:"PF=0", f:{}, e:"JNP target"},
+    {c:"Control", n:"JPO", d:"Jump Parity Odd.", o:"label", a:"PF=0", f:{}, e:"JPO target"},
+    {c:"Control", n:"JCXZ", d:"Jump if CX Zero.", o:"label", a:"CX=0", f:{}, e:"JCXZ target"},
+    {c:"Control", n:"LOOP", d:"Loop until CX=0.", o:"label", a:"CX--", f:{}, e:"LOOP target"},
+    {c:"Control", n:"LOOPE", d:"Loop Equal.", o:"label", a:"CX--, ZF=1", f:{}, e:"LOOPE target"},
+    {c:"Control", n:"LOOPZ", d:"Loop Zero.", o:"label", a:"Same as LOOPE", f:{}, e:"LOOPZ target"},
+    {c:"Control", n:"LOOPNE", d:"Loop Not Equal.", o:"label", a:"CX--, ZF=0", f:{}, e:"LOOPNE target"},
+    {c:"Control", n:"LOOPNZ", d:"Loop Not Zero.", o:"label", a:"Same as LOOPNE", f:{}, e:"LOOPNZ target"},
+    {c:"Control", n:"INT", d:"Interrupt.", o:"imm8", a:"Call ISR", f:{I:'0',T:'0'}, e:"INT 21h"},
+    {c:"Control", n:"INTO", d:"Interrupt if Overflow.", o:"No operands", a:"Int 4 if OF=1", f:{I:'0',T:'0'}, e:"INTO"},
+    {c:"Control", n:"IRET", d:"Return from Interrupt.", o:"No operands", a:"Pop IP,CS,Flags", f:{O:'r',D:'r',I:'r',T:'r',S:'r',Z:'r',A:'r',P:'r',C:'r'}, e:"IRET"},
+
+    // PROCESSOR
+    {c:"Processor", n:"CLC", d:"Clear Carry Flag.", o:"None", a:"CF = 0", f:{C:'0'}, e:"CLC"},
+    {c:"Processor", n:"CMC", d:"Complement Carry Flag.", o:"None", a:"CF = !CF", f:{C:'r'}, e:"CMC"},
+    {c:"Processor", n:"STC", d:"Set Carry Flag.", o:"None", a:"CF = 1", f:{C:'1'}, e:"STC"},
+    {c:"Processor", n:"CLD", d:"Clear Direction Flag.", o:"None", a:"DF = 0", f:{D:'0'}, e:"CLD"},
+    {c:"Processor", n:"STD", d:"Set Direction Flag.", o:"None", a:"DF = 1", f:{D:'1'}, e:"STD"},
+    {c:"Processor", n:"CLI", d:"Clear Interrupt Flag.", o:"None", a:"IF = 0", f:{I:'0'}, e:"CLI"},
+    {c:"Processor", n:"STI", d:"Set Interrupt Flag.", o:"None", a:"IF = 1", f:{I:'1'}, e:"STI"},
+    {c:"Processor", n:"NOP", d:"No Operation.", o:"None", a:"-", f:{}, e:"NOP"},
+    {c:"Processor", n:"HLT", d:"Halt Processor.", o:"None", a:"Wait for Int", f:{}, e:"HLT"}
+];
+
+const nav = document.getElementById('navContent');
+const main = document.getElementById('mainContent');
+const searchInput = document.getElementById('searchInput');
+
+function highlight(code) {
+    return code.split('\n').map(l => {
+        let [t, c] = l.split(';');
+        t = t.replace(/\b(MOV|PUSH|POP|XCHG|IN|OUT|XLATB|LEA|LDS|LES|LAHF|SAHF|PUSHF|POPF|ADD|ADC|SUB|SBB|INC|DEC|CMP|NEG|MUL|IMUL|DIV|IDIV|CBW|CWD|AAA|AAD|AAM|AAS|DAA|DAS|AND|OR|XOR|NOT|TEST|SHL|SAL|SHR|SAR|ROL|ROR|RCL|RCR|MOVSB|MOVSW|CMPSB|CMPSW|SCASB|SCASW|LODSB|LODSW|STOSB|STOSW|REP|REPE|REPZ|REPNE|REPNZ|JMP|CALL|RET|RETF|JE|JZ|JNE|JNZ|JA|JNBE|JAE|JNB|JB|JNAE|JBE|JNA|JG|JNLE|JGE|JNL|JL|JNGE|JLE|JNG|JC|JNC|JO|JNO|JS|JNS|JP|JPE|JNP|JPO|JCXZ|LOOP|LOOPE|LOOPZ|LOOPNE|LOOPNZ|INT|INTO|IRET|CLC|CMC|STC|CLD|STD|CLI|STI|NOP|HLT|PUSHA|POPA)\b/gi, '<span class="tok-mne">$1</span>')
+             .replace(/\b(AX|BX|CX|DX|AH|AL|BL|BH|CH|CL|DH|DL|SI|DI|SP|BP|CS|DS|ES|SS)\b/gi, '<span class="tok-reg">$1</span>')
+             .replace(/\b([0-9A-F]+h|[0-9]+)\b/gi, '<span class="tok-num">$1</span>');
+        return t + (c ? `<span class="tok-com">;${c}</span>` : '');
+    }).join('\n');
+}
+
+function renderFlags(f) {
+    // Map Standard Abbreviations
+    const map = {
+        'O': 'OF', 'D': 'DF', 'I': 'IF', 'T': 'TF',
+        'S': 'SF', 'Z': 'ZF', 'A': 'AF', 'P': 'PF', 'C': 'CF'
+    };
+    const list = ['O','D','I','T','S','Z','A','P','C'];
+
+    return `<div class="flag-strip">` + list.map(k => {
+        const v = f[k] || '-';
+        let cls = 'dim';
+        let title = 'Unchanged';
+
+        if(v === '1') { cls = 'set'; title = 'Set to 1'; }
+        else if(v === '0') { cls = 'clr'; title = 'Cleared to 0'; }
+        else if(v === 'r') { cls = 'mod'; title = 'Modified'; }
+        else if(v === '?') { cls = 'undef'; title = 'Undefined'; }
+
+        return `<div class="flag-box ${cls}" title="${map[k]}: ${title}">
+            <div class="flag-val">${map[k]}</div>
+        </div>`;
+    }).join('') + `</div>`;
+}
+
+function init() {
+    const cats = {};
+    db.forEach(i => { if(!cats[i.c]) cats[i.c]=[]; cats[i.c].push(i); });
+
+    nav.innerHTML = Object.keys(cats).map(c => `
+        <details>
+            <summary>${c}</summary>
+            <div class="nav-items">${cats[c].map(i =>
+                `<a class="nav-item" href="#${i.n}">${i.n}</a>`
+            ).join('')}</div>
+        </details>
+    `).join('');
+
+    main.innerHTML = db.map(i => `
+        <div id="${i.n}" class="instruction-container">
+            <div class="inst-header">
+                <div class="inst-title">${i.n} </div>
+                <div class="inst-cat">${i.c}</div>
+            </div>
+            <div class="shelf-stack">
+                <div class="shelf"><div class="shelf-label">Description</div><div class="shelf-content">${i.d}</div></div>
+                <div class="shelf-row">
+                    <div class="shelf"><div class="shelf-label">Operands</div><div class="shelf-content code-bg">${i.o.replace(/\n/g,'<br>')}</div></div>
+                    <div class="shelf">
+                        <div class="shelf-label">Flags Affected</div>
+                        <div class="shelf-content" style="display:flex; align-items:center;">
+                            ${renderFlags(i.f)}
+                        </div>
+                    </div>
+                </div>
+                <div class="shelf"><div class="shelf-label">Logic</div><div class="shelf-content code-bg">${i.a.replace(/\n/g,'<br>')}</div></div>
+                <div class="shelf"><div class="shelf-label">Example</div><div class="shelf-content code-bg"><pre style="margin:0">${highlight(i.e)}</pre></div></div>
+            </div>
+        </div>
+    `).join('');
+}
+
+searchInput.addEventListener('keyup', (e) => {
+    const term = e.target.value.toUpperCase();
+    document.querySelectorAll('.nav-item').forEach(el => {
+        const m = el.innerText.includes(term);
+        el.style.display = m ? 'block' : 'none';
+        if(term && m) el.closest('details').open = true;
     });
-  })
-  .catch(error => console.error('Error reading JSON:', error));
+    document.querySelectorAll('.instruction-container').forEach(el => {
+        el.style.display = (el.id.includes(term) || el.innerText.toUpperCase().includes(term)) ? 'block' : 'none';
+    });
+});
 
-
+init();
 </script>
-
+</body>
 </html>
-
-
